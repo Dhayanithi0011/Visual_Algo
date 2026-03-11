@@ -1,14 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 //  VisualizerDiagrams.jsx  — ALL 9 BUGS FIXED
-//  Fix #1: Hanoi pegs show disks PERMANENTLY (cumulative state from allSteps)
-//  Fix #2: Quick sort partition range corrected (partLow/partHigh fields)
-//  Fix #3: Linked list carries lastHeap so diagram never goes blank
-//  Fix #4: Merge sort highlights currently-merging subarray
-//  Fix #5: Queue parser uses proper string split, not char-level replace
-//  Fix #6: BST layout correct when node has only a right child
-//  Fix #7: DFS shows call-stack strip (reads from step.stack frames)
-//  Fix #8: Knapsack reads weights/values/capacity from step metadata
-//  Fix #9: LCS reads s1/s2 from step metadata
+//  Call stack is now shown in the topbar (Visualizer.jsx), not here.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const C = {
@@ -115,13 +107,11 @@ function CallTreeSVG({ root, activeLabel, returningLabel }) {
   );
 }
 
-// ─── FIX #1: Tower of Hanoi — persistent peg state built from cumulative moves ───
+// ─── Fix #1: Tower of Hanoi persistent peg state ───
 function buildHanoiPegState(n, moves) {
-  // Start: all n disks on peg A, largest at bottom
   const pegs = { A: Array.from({ length: n }, (_, i) => n - i), B: [], C: [] };
   for (const { disk, from, to } of moves) {
-    const src = pegs[from];
-    const dst = pegs[to];
+    const src = pegs[from], dst = pegs[to];
     const idx = src.lastIndexOf(disk);
     if (idx !== -1) src.splice(idx, 1);
     dst.push(disk);
@@ -130,18 +120,14 @@ function buildHanoiPegState(n, moves) {
 }
 
 function HanoiPegs({ step }) {
-  // Read structured data embedded directly by the simulator — no regex, no scanning
   const n = step.hanoiN || 3;
   const movesUpTo = Array.isArray(step.hanoiMoves) ? step.hanoiMoves : [];
-
   const pegs = buildHanoiPegState(n, movesUpTo);
   const lastMove = movesUpTo[movesUpTo.length - 1] || null;
-
   const pegNames = ["A", "B", "C"];
   const pegXs    = { A: 70, B: 210, C: 350 };
   const W = 420, baseY = 178, diskH = 20, diskGap = 2;
   const maxDiskW = 90, minDiskW = 28;
-
   return (
     <div style={card}>
       <div style={label}>Tower of Hanoi — Peg State (Persistent)</div>
@@ -156,23 +142,15 @@ function HanoiPegs({ step }) {
         </div>
       )}
       <svg viewBox={`0 0 ${W} 215`} width="100%" style={{ maxHeight: 215, display: "block" }}>
-        {/* Base platform */}
         <rect x={10} y={baseY + diskH + diskGap} width={W - 20} height={9} rx={4} fill={C.bgSubtle} stroke={C.border} strokeWidth={1.5} />
-
         {pegNames.map(peg => {
           const cx = pegXs[peg];
           const isActive = lastMove && (lastMove.from === peg || lastMove.to === peg);
           const diskStack = pegs[peg] || [];
           return (
             <g key={peg}>
-              {/* Peg rod */}
-              <rect x={cx - 5} y={38} width={10} height={baseY - 38 + diskH + diskGap} rx={4}
-                fill={isActive ? C.accentMid : C.border} />
-              {/* Peg label */}
-              <text x={cx} y={210} textAnchor="middle"
-                fill={isActive ? C.accent : C.muted}
-                fontSize={16} fontWeight="700" fontFamily={C.mono}>{peg}</text>
-              {/* Disks — index 0 = bottom of peg (largest), drawn bottom-up */}
+              <rect x={cx - 5} y={38} width={10} height={baseY - 38 + diskH + diskGap} rx={4} fill={isActive ? C.accentMid : C.border} />
+              <text x={cx} y={210} textAnchor="middle" fill={isActive ? C.accent : C.muted} fontSize={16} fontWeight="700" fontFamily={C.mono}>{peg}</text>
               {diskStack.map((diskNum, stackIdx) => {
                 const dw = minDiskW + ((diskNum - 1) / Math.max(n - 1, 1)) * (maxDiskW - minDiskW);
                 const dy = baseY - stackIdx * (diskH + diskGap);
@@ -182,11 +160,9 @@ function HanoiPegs({ step }) {
                     <rect x={cx - dw / 2} y={dy} width={dw} height={diskH} rx={5}
                       fill={isJustMoved ? C.accentLight : C.tealLight}
                       stroke={isJustMoved ? C.accent : C.teal}
-                      strokeWidth={isJustMoved ? 2.5 : 1.5}
-                      style={{ transition: "all .3s" }} />
+                      strokeWidth={isJustMoved ? 2.5 : 1.5} style={{ transition: "all .3s" }} />
                     <text x={cx} y={dy + diskH / 2} textAnchor="middle" dominantBaseline="central"
-                      fill={isJustMoved ? C.accent : C.teal}
-                      fontSize={10} fontWeight="700" fontFamily={C.mono}>{diskNum}</text>
+                      fill={isJustMoved ? C.accent : C.teal} fontSize={10} fontWeight="700" fontFamily={C.mono}>{diskNum}</text>
                   </g>
                 );
               })}
@@ -223,7 +199,7 @@ function SumArrayViz({ step }) {
   );
 }
 
-export function RecursionDiagram({ step, programKey, allSteps, currentStepIdx }) {
+export function RecursionDiagram({ step, programKey, allSteps }) {
   if (!step) return null;
   if (programKey === "tower_of_hanoi") return <HanoiPegs step={step} />;
   if (programKey === "sum_array")      return <SumArrayViz step={step} />;
@@ -251,7 +227,7 @@ export function RecursionDiagram({ step, programKey, allSteps, currentStepIdx })
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 2. SORTING  (Fix #2: quick sort partition range; Fix #4: merge sort highlight)
+// 2. SORTING
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function SortingDiagram({ step, programKey }) {
@@ -266,10 +242,8 @@ export function SortingDiagram({ step, programKey }) {
     if (i === step.hj)             return { fill: C.orangeLight, stroke: C.orange };
     if (i === step.hj + 1 && programKey !== "quick_sort") return { fill: C.redLight, stroke: C.red };
     if (i === step.minIdx)         return { fill: C.purpleLight, stroke: C.purple };
-    // FIX #2: quick sort uses explicit partLow/partHigh fields (set by simulation)
     if (programKey === "quick_sort" && step.partLow !== undefined && step.partHigh !== undefined && i >= step.partLow && i <= step.partHigh)
       return { fill: C.blueLight, stroke: C.blue };
-    // FIX #4: merge sort highlights actively-merging subarray via mergeLeft/mergeRight
     if (programKey === "merge_sort" && step.mergeLeft !== undefined && step.mergeRight !== undefined && i >= step.mergeLeft && i <= step.mergeRight)
       return { fill: C.blueLight, stroke: C.blue };
     return { fill: C.bgSubtle, stroke: C.border };
@@ -300,7 +274,6 @@ export function SortingDiagram({ step, programKey }) {
             </g>
           );
         })}
-        {/* FIX #2: pivot marker at correct pivotIdx */}
         {programKey === "quick_sort" && step.pivotIdx >= 0 && (
           <line x1={step.pivotIdx * (bW + bGap) + bW / 2} y1={0} x2={step.pivotIdx * (bW + bGap) + bW / 2} y2={H}
             stroke={C.orange} strokeWidth={2} strokeDasharray="5,3" />
@@ -372,7 +345,6 @@ export function SearchingDiagram({ step }) {
 // 4. DATA STRUCTURES
 // ═══════════════════════════════════════════════════════════════════════════
 
-// FIX #3: use step.heap OR step.lastHeap so diagram never goes blank
 export function LinkedListDiagram({ step }) {
   const heap    = step?.heap || step?.lastHeap || {};
   const vars    = step?.stack?.[0]?.vars || {};
@@ -436,11 +408,9 @@ export function StackImplDiagram({ step }) {
   );
 }
 
-// FIX #5: Queue parser — proper string split, no character-level replace
 export function QueueImplDiagram({ step }) {
   const vars = step?.stack?.[0]?.vars || {};
   const rawQueue = String(vars.queue || "[]");
-  // Properly strip deque([ ... ]) or [ ... ] wrappers, then split on comma
   const cleaned = rawQueue
     .replace(/^deque\(\[/, "").replace(/\]\)$/, "")
     .replace(/^\[/, "").replace(/\]$/, "").trim();
@@ -475,7 +445,6 @@ export function QueueImplDiagram({ step }) {
   );
 }
 
-// FIX #6: BST layout — correct x when node has only right child
 function buildBST(vals) {
   let root = null;
   function ins(nd, v) { if (!nd) return { val: v, left: null, right: null }; if (v < nd.val) nd.left = ins(nd.left, v); else nd.right = ins(nd.right, v); return nd; }
@@ -487,16 +456,10 @@ function layoutBST(nd, depth = 0, xc = { v: 0 }) {
   nd.left  = layoutBST(nd.left,  depth + 1, xc);
   nd.right = layoutBST(nd.right, depth + 1, xc);
   nd.y = depth * 68;
-  if (!nd.left && !nd.right) {
-    nd.x = xc.v * 62; xc.v++;
-  } else if (nd.left && !nd.right) {
-    nd.x = nd.left.x;
-  } else if (!nd.left && nd.right) {
-    // FIX #6: was incorrectly using 0 + right.x
-    nd.x = nd.right.x;
-  } else {
-    nd.x = (nd.left.x + nd.right.x) / 2;
-  }
+  if (!nd.left && !nd.right) { nd.x = xc.v * 62; xc.v++; }
+  else if (nd.left && !nd.right)  { nd.x = nd.left.x; }
+  else if (!nd.left && nd.right)  { nd.x = nd.right.x; }
+  else { nd.x = (nd.left.x + nd.right.x) / 2; }
   return nd;
 }
 function bstNodes(nd, out = []) { if (!nd) return out; bstNodes(nd.left, out); out.push(nd); bstNodes(nd.right, out); return out; }
@@ -546,7 +509,7 @@ export function BSTDiagram({ step }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 5. GRAPH  (Fix #7: DFS shows call-stack strip)
+// 5. GRAPH
 // ═══════════════════════════════════════════════════════════════════════════
 
 const GP = { 0:{x:200,y:52}, 1:{x:100,y:152}, 2:{x:300,y:152}, 3:{x:40,y:262}, 4:{x:160,y:262}, 5:{x:300,y:262} };
@@ -562,7 +525,6 @@ export function GraphDiagram({ step, algorithmKey }) {
   const enqueuedN  = vars.enqueued !== undefined ? parseInt(vars.enqueued) : -1;
   const orderMap   = {}; orderArr.forEach((n, i) => { orderMap[n] = i + 1; });
 
-  // FIX #7: DFS call stack — read from step.stack frames that have fn==="dfs"
   const dfsCallStack = algorithmKey === "dfs"
     ? (step.stack || []).filter(f => f.fn === "dfs" && f.vars?.node !== undefined).map(f => parseInt(f.vars.node)).filter(n => !isNaN(n))
     : [];
@@ -624,7 +586,6 @@ export function GraphDiagram({ step, algorithmKey }) {
             </g>
           );
         })}
-        {/* BFS queue strip */}
         {algorithmKey === "bfs" && queueArr.length > 0 && (
           <g>
             <text x={8} y={H-28} fill={C.dim} fontSize={10} fontFamily={C.mono}>Queue →</text>
@@ -636,7 +597,6 @@ export function GraphDiagram({ step, algorithmKey }) {
             ))}
           </g>
         )}
-        {/* FIX #7: DFS call-stack strip */}
         {algorithmKey === "dfs" && dfsCallStack.length > 0 && (
           <g>
             <text x={8} y={H-28} fill={C.dim} fontSize={10} fontFamily={C.mono}>Call Stack →</text>
@@ -678,7 +638,7 @@ export function FibDPDiagram({ step }) {
           const has = memo[i] !== undefined, isN = i === n, hit = isN && isHit;
           const bg = hit ? C.blueLight : isN ? C.accentLight : has ? C.tealLight : C.bgSubtle;
           const bc = hit ? C.blue      : isN ? C.accent      : has ? C.teal      : C.border;
-          const vc = hit ? C.blue      : has ? C.accent      : C.dim;
+          const vc = hit ? C.blue      : has ? C.accent       : C.dim;
           return (
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
               <div style={{ height: 16, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -702,10 +662,8 @@ export function FibDPDiagram({ step }) {
   );
 }
 
-// FIX #8: Knapsack reads actual weights/values/capacity from step metadata
 export function KnapsackDiagram({ step }) {
   const vars    = step?.stack?.[0]?.vars || {};
-  // Simulation now attaches kWeights, kValues, kCapacity to each step
   const weights = step.kWeights  || [2, 3, 4, 5];
   const values  = step.kValues   || [3, 4, 5, 6];
   const cap     = step.kCapacity !== undefined ? step.kCapacity : 8;
@@ -758,13 +716,11 @@ export function KnapsackDiagram({ step }) {
   );
 }
 
-// FIX #9: LCS reads actual s1/s2 from step metadata
 export function LCSDiagram({ step }) {
   const vars = step?.stack?.[0]?.vars || {};
   const iIdx = vars.i !== undefined ? parseInt(vars.i) : -1;
   const jIdx = vars.j !== undefined ? parseInt(vars.j) : -1;
   const isMatch = String(vars.match || "").toUpperCase().includes("YES");
-  // Simulation now attaches lcsS1, lcsS2 to each step
   const s1 = step.lcsS1 || "ABCBDAB";
   const s2 = step.lcsS2 || "BDCAB";
   const m = s1.length, n2 = s2.length;
@@ -815,7 +771,7 @@ export function LCSDiagram({ step }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MASTER DISPATCHER — now passes currentStepIdx for Hanoi
+// MASTER DISPATCHER
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function ProgramDiagram({ step, programKey, allSteps, currentStepIdx }) {
