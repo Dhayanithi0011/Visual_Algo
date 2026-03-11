@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Visualizer from "./pages/Visualizer";
@@ -6,33 +6,86 @@ import LearningPath from "./pages/LearningPath";
 import GapDetector from "./pages/GapDetector";
 import Dashboard from "./pages/Dashboard";
 import { useAuth } from "./services/useAuth";
+import { useUserProgress } from "./services/useUserProgress";
 import "./App.css";
 
+// Restore last visited page across browser refreshes (same session)
+function getInitialPage() {
+  try { return sessionStorage.getItem("vz_page") || "home"; } catch { return "home"; }
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState("home");
-  const { user, loading, signInWithGoogle, logout } = useAuth();
+  const [activePage, setActivePage] = useState(getInitialPage);
+  const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
 
-  // Track which programs the user has run in the Visualizer
-  const [watchedPrograms, setWatchedPrograms] = useState(new Set());
+  // ── All persistent progress: loaded once on login, kept live ─────────────
+  const {
+    scores,
+    watchedSet,
+    vizSessions,
+    quizHistory,
+    loaded: progressLoaded,
+    recordQuizScore,
+    recordProgramWatched,
+  } = useUserProgress(user);
 
-  const handleProgramWatched = (programKey) => {
-    setWatchedPrograms(prev => new Set([...prev, programKey]));
+  // Persist active page across refreshes
+  const navigate = (page) => {
+    setActivePage(page);
+    try { sessionStorage.setItem("vz_page", page); } catch {}
+  };
+
+  // ── Callbacks passed down to pages ────────────────────────────────────────
+  const handleProgramWatched = (programKey, programLabel) => {
+    recordProgramWatched(programKey, programLabel);
+  };
+
+  const handleQuizScore = (programKey, programLabel, score) => {
+    recordQuizScore(programKey, programLabel, score);
   };
 
   const renderPage = () => {
     switch (activePage) {
       case "home":
-        return <Home onNavigate={setActivePage} />;
+        return <Home onNavigate={navigate} />;
+
       case "visualizer":
-        return <Visualizer user={user} onProgramWatched={handleProgramWatched} />;
+        return (
+          <Visualizer
+            user={user}
+            onProgramWatched={handleProgramWatched}
+          />
+        );
+
       case "learning":
         return <LearningPath user={user} />;
+
       case "gap-detector":
-        return <GapDetector user={user} watchedPrograms={watchedPrograms} onNavigate={setActivePage} />;
+        return (
+          <GapDetector
+            user={user}
+            scores={scores}
+            watchedPrograms={watchedSet}
+            onQuizScore={handleQuizScore}
+            onNavigate={navigate}
+            progressLoaded={progressLoaded}
+          />
+        );
+
       case "dashboard":
-        return <Dashboard onNavigate={setActivePage} user={user} />;
+        return (
+          <Dashboard
+            onNavigate={navigate}
+            user={user}
+            scores={scores}
+            vizSessions={vizSessions}
+            quizHistory={quizHistory}
+            progressLoaded={progressLoaded}
+          />
+        );
+
       default:
-        return <Home onNavigate={setActivePage} />;
+        return <Home onNavigate={navigate} />;
     }
   };
 
@@ -40,9 +93,9 @@ export default function App() {
     <div className="app-root">
       <Navbar
         activePage={activePage}
-        onNavigate={setActivePage}
+        onNavigate={navigate}
         user={user}
-        loading={loading}
+        loading={authLoading}
         onSignIn={signInWithGoogle}
         onSignOut={logout}
       />

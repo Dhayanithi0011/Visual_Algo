@@ -4,6 +4,45 @@
   margin: 0 auto;
 }
 
+/* Sign-in prompt */
+.dash-sign-in-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 40px;
+  text-align: center;
+  margin-top: 40px;
+}
+.dash-sign-in-prompt h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.dash-sign-in-prompt p {
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 360px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Header with avatar */
+.dash-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.dash-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
 .dash-header { margin-bottom: 28px; }
 
 .dash-title {

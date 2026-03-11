@@ -156,8 +156,8 @@ export default function Visualizer({ user, onProgramWatched }) {
       setHasRun(true);
       setIsRunning(false);
       setCodeDirty(false);
-      // Notify parent that this program has been watched
-      onProgramWatched?.(activeProgram.key);
+      // Notify parent that this program has been watched (key + label for history)
+      onProgramWatched?.(activeProgram.key, activeProgram.label);
       if (user?.uid) {
         saveVisualizerSession(user.uid, code, activeProgram.label, s.length);
       }

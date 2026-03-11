@@ -7,7 +7,6 @@ import {
   FiUnlock, FiEye
 } from "react-icons/fi";
 import { QUIZ_CHAPTERS } from "./quizData";
-import { saveGapAnalysis } from "../services/sessions";
 import "./GapDetector.css";
 
 // ─────────────────────────────────────────────────────────────────
@@ -517,8 +516,14 @@ function GapResults({ scores, onRetake }) {
 // ─────────────────────────────────────────────────────────────────
 // MAIN GAP DETECTOR PAGE
 // ─────────────────────────────────────────────────────────────────
-export default function GapDetector({ user, watchedPrograms = new Set(), onNavigate }) {
-  const [scores, setScores] = useState({});
+export default function GapDetector({
+  user,
+  scores = {},
+  watchedPrograms = new Set(),
+  onQuizScore,
+  onNavigate,
+  progressLoaded = true,
+}) {
   // view: "chapters" | "quiz" | "results"
   const [view, setView]   = useState("chapters");
   const [activeChapter, setActiveChapter] = useState(null);
@@ -531,16 +536,9 @@ export default function GapDetector({ user, watchedPrograms = new Set(), onNavig
   };
 
   const handleQuizFinish = (programKey, pct) => {
-    const newScores = { ...scores, [programKey]: pct };
-    setScores(newScores);
+    // Bubble up to App which persists to Firestore and updates shared state
+    onQuizScore?.(programKey, activeProgram?.label || programKey, pct);
     setView("chapters");
-    if (user?.uid) {
-      const allAttempted = QUIZ_CHAPTERS.flatMap(ch => ch.programs).filter(p => newScores[p.key] !== undefined);
-      const avg = allAttempted.length
-        ? Math.round(allAttempted.reduce((acc,p) => acc+newScores[p.key],0)/allAttempted.length)
-        : pct;
-      saveGapAnalysis(user.uid, "algorithms-quiz", newScores, [], avg);
-    }
   };
 
   const handleRetake = (programKey) => {
@@ -593,6 +591,14 @@ export default function GapDetector({ user, watchedPrograms = new Set(), onNavig
   // ── CHAPTERS VIEW (default) ───────────────────────────────────
   return (
     <div className="gd-page">
+      {/* Loading shimmer while Firebase loads */}
+      {!progressLoaded && (
+        <div className="gd-loading-bar">
+          <span className="gd-loading-dot" />
+          <span>Loading your progress…</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="gd-header card">
         <div className="gd-header-left">
