@@ -405,15 +405,26 @@ export default function AuthPage({ onSuccess }) {
 
   const { signInWithGoogle } = useAuth();
 
+  const IS_LOCAL = window.location.hostname === "localhost" ||
+                   window.location.hostname === "127.0.0.1";
+
   const handleGoogle = async () => {
     setGError("");
     setGBusy(true);
-    try { await signInWithGoogle(); onSuccess(); }
-    catch (err) {
-      if (err.code !== "auth/popup-closed-by-user")
+    try {
+      await signInWithGoogle();
+      // On localhost: signInWithPopup returns immediately → call onSuccess
+      // On production: signInWithRedirect navigates away → page reloads,
+      // onAuthStateChanged fires automatically, no need to call onSuccess here
+      if (IS_LOCAL) onSuccess();
+    } catch (err) {
+      if (err.code !== "auth/popup-closed-by-user" &&
+          err.code !== "auth/cancelled-popup-request") {
         setGError("Google sign-in failed. Please try again.");
+      }
+      setGBusy(false);
     }
-    setGBusy(false);
+    if (IS_LOCAL) setGBusy(false);
   };
 
   return (

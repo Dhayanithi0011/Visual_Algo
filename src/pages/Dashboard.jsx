@@ -29,9 +29,13 @@ const CHAPTER_COLORS = {
 function StreakBadge({ streak, onClick }) {
   const count   = streak?.count   || 0;
   const freezes = Math.min(streak?.freezes || 0, 2);
+  // Always show badge. "active" = has streak (shines). "zero" = no streak yet (dim, encourages action)
   const active  = count > 0;
+  const title   = count === 0
+    ? "Take your first quiz to start a streak!"
+    : `${count} day streak${freezes > 0 ? ` · ${freezes} freeze${freezes > 1 ? "s" : ""} available` : ""}`;
   return (
-    <button className={`dash-streak-badge ${active ? "active" : ""}`} onClick={onClick} title={`${count} day streak${freezes > 0 ? ` · ${freezes} freeze${freezes > 1 ? "s" : ""} available` : ""}`}>
+    <button className={`dash-streak-badge ${active ? "active" : "zero"}`} onClick={onClick} title={title}>
       {/* Mini flame */}
       <span className="dsb-flame" aria-hidden>
         <svg width="15" height="18" viewBox="0 0 60 70" fill="none">
