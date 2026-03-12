@@ -180,7 +180,11 @@ function HanoiPegs({ step }) {
 function SumArrayViz({ step }) {
   const vars = step.stack?.[0]?.vars || {};
   const items = String(vars.arr || "[]").replace(/[\[\]]/g, "").split(",").map(s => s.trim()).filter(Boolean);
-  const firstEl = vars["arr[0]"], ret = vars["↩ return"];
+  const firstEl = vars["arr[0]"];
+  const ret     = vars["return"];
+  const sumRest = vars["sum_arr(rest)"];
+  const output  = vars["output"];
+  const result  = vars["result"];
   return (
     <div style={card}>
       <div style={label}>Array at This Recursive Call</div>
@@ -191,10 +195,16 @@ function SumArrayViz({ step }) {
             <div style={{ fontFamily: C.mono, fontSize: 9, color: C.dim }}>[{i}]</div>
           </div>
         ))}
-        {items.length === 0 && <div style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px dashed ${C.border}`, fontFamily: C.mono, fontSize: 12, color: C.dim }}>[ ] — base case</div>}
+        {items.length === 0 && <div style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px dashed ${C.border}`, fontFamily: C.mono, fontSize: 12, color: C.dim }}>[ ] — base case, return 0</div>}
       </div>
-      {firstEl !== undefined && <div style={{ marginTop: 10, fontFamily: C.mono, fontSize: 12, color: C.accent }}>arr[0] = {firstEl} → adding to recursive result</div>}
-      {ret !== undefined && <div style={{ marginTop: 6, fontFamily: C.mono, fontSize: 13, color: C.blue, fontWeight: "700" }}>↩ returning {String(ret)}</div>}
+      {firstEl !== undefined && <div style={{ marginTop: 10, fontFamily: C.mono, fontSize: 12, color: C.accent }}>arr[0] = {firstEl} — adding to recursive result</div>}
+      {sumRest !== undefined && <div style={{ marginTop: 6, fontFamily: C.mono, fontSize: 12, color: C.blue }}>sum_arr(rest) = {String(sumRest)}</div>}
+      {ret !== undefined && <div style={{ marginTop: 6, fontFamily: C.mono, fontSize: 13, color: C.teal, fontWeight: "700" }}>returning {String(ret)}</div>}
+      {(output !== undefined || result !== undefined) && (
+        <div style={{ marginTop: 12, fontFamily: C.mono, fontSize: 15, fontWeight: "700", color: C.accent, background: C.accentLight, border: `2px solid ${C.accentBorder}`, borderRadius: 8, padding: "8px 16px", display: "inline-block" }}>
+          Output: {String(output ?? result)}
+        </div>
+      )}
     </div>
   );
 }
@@ -467,42 +477,109 @@ function bstEdges(nd, out = []) { if (!nd) return out; if (nd.left) { out.push([
 
 export function BSTDiagram({ step }) {
   const vars = step?.stack?.[0]?.vars || {};
-  const insertingVal = vars.inserting !== undefined ? parseInt(vars.inserting) : null;
-  const curVal       = vars.val       !== undefined ? parseInt(vars.val)       : null;
-  const insertedStr  = String(vars.inserted_so_far || "");
-  const existing = insertedStr && insertedStr !== "∅" ? insertedStr.split(",").map(Number).filter(n => !isNaN(n)) : [5, 3, 7, 1, 4, 6, 8];
-  const allVals  = insertingVal && !existing.includes(insertingVal) ? [...existing, insertingVal] : existing;
-  const rawRoot  = buildBST(allVals);
-  if (!rawRoot) return null;
-  const root  = layoutBST(JSON.parse(JSON.stringify(rawRoot)));
+
+  // ── Which value is currently being inserted? ─────────────────────────────────
+  // Outer step ("Inserting value X"): vars.inserting is set
+  // Recursive insert() steps: vars.val holds the value being inserted
+  // inorder() steps: neither is relevant — no highlight needed
+  const insertingVal = vars.inserting !== undefined
+    ? parseInt(vars.inserting)
+    : vars.val !== undefined && (step?.stack?.[0]?.fn === "insert" || String(vars.val).match(/^\d+$/))
+      ? parseInt(vars.val)
+      : null;
+
+  // The node we are currently COMPARING against (root/node param in insert)
+  // vars.root looks like "Node(5)" — extract the number
+  const curVal = (() => {
+    const rootStr = String(vars.root || "");
+    const m = rootStr.match(/Node\((\d+)\)/);
+    if (m) return parseInt(m[1]);
+    return null;
+  })();
+
+  // Use inserted_so_far from simulator for progressive tree building
+  const insertedArr  = Array.isArray(step?.inserted_so_far) ? step.inserted_so_far : [];
+
+  // Build the visible node set:
+  // – If we have a confirmed inserted list, show those + the value currently being inserted
+  // – Otherwise empty
+  const allVals = (() => {
+    if (insertedArr.length > 0) {
+      // Include the value being inserted if it hasn't been committed yet
+      if (insertingVal !== null && !insertedArr.includes(insertingVal))
+        return [...insertedArr, insertingVal];
+      return insertedArr;
+    }
+    if (insertingVal !== null) return [insertingVal];
+    return [];
+  })();
+
+  const rawRoot = allVals.length > 0 ? buildBST(allVals) : null;
+  if (!rawRoot) return (
+    <div style={card}>
+      <div style={label}>Binary Search Tree</div>
+      <div style={{ fontFamily: C.mono, fontSize: 12, color: C.dim, padding: "20px 0" }}>Tree is empty — values will appear as they are inserted.</div>
+    </div>
+  );
+
+  // Deep-clone before layout mutation; capture root value before layout mutates the object
+  const rootClone = JSON.parse(JSON.stringify(rawRoot));
+  const treeRootVal = rootClone.val; // first-inserted value is always the BST root
+  const root  = layoutBST(rootClone);
   const nodes = bstNodes(root), edges = bstEdges(root);
   const minX  = Math.min(...nodes.map(n => n.x));
   nodes.forEach(n => n.x -= minX - 28);
   const maxX = Math.max(...nodes.map(n => n.x)) + 52;
   const maxY = Math.max(...nodes.map(n => n.y)) + 48;
   const R = 22;
+
+  // Determine what the last inserted (fully committed) node is for a subtle highlight
+  const lastInserted = insertedArr.length > 0 ? insertedArr[insertedArr.length - 1] : null;
+
   return (
-    <div style={card}>
+    <div style={{ ...card, overflowX: "auto", overflowY: "auto" }}>
       <div style={label}>Binary Search Tree</div>
-      <Legend items={[{ color: C.accent, label: "Just inserted" }, { color: C.orange, label: "Comparing" }, { color: C.teal, label: "Root" }]} />
-      <svg viewBox={`0 0 ${maxX} ${maxY}`} width="100%" style={{ maxHeight: 280 }}>
-        {edges.map(([p, ch], i) => <line key={i} x1={p.x} y1={p.y + R} x2={ch.x} y2={ch.y - R} stroke={C.edgeLine} strokeWidth={1.5} />)}
-        {nodes.map(n => {
-          const ins    = n.val === insertingVal;
-          const comp   = n.val === curVal && !ins;
-          const isRoot = !nodes.some(o => o.left?.val === n.val || o.right?.val === n.val);
-          const fill   = ins ? C.accentLight : comp ? C.orangeLight : isRoot ? C.tealLight : C.bgSubtle;
-          const bc     = ins ? C.accent      : comp ? C.orange      : isRoot ? C.teal      : C.border;
-          const tc     = ins ? C.accent      : comp ? C.orange      : C.text;
-          return (
-            <g key={n.val}>
-              {ins && <circle cx={n.x} cy={n.y} r={R + 9} fill="none" stroke={C.accentMid} strokeWidth={8} />}
-              <circle cx={n.x} cy={n.y} r={R} fill={fill} stroke={bc} strokeWidth={ins ? 2.5 : 1.5} style={{ transition: "all .25s" }} />
-              <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central" fill={tc} fontSize={13} fontWeight={ins ? "700" : "500"} fontFamily={C.mono}>{n.val}</text>
-            </g>
-          );
-        })}
-      </svg>
+      <Legend items={[
+        { color: C.accent, label: "Being inserted" },
+        { color: C.orange, label: "Comparing node" },
+        { color: C.teal,   label: "Root" },
+        { color: C.blue,   label: "Last inserted" },
+      ]} />
+      <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: 340 }}>
+        <svg viewBox={`0 0 ${Math.max(maxX, 200)} ${Math.max(maxY, 100)}`} width={Math.max(maxX, 200)} height={Math.max(maxY, 100)} style={{ display: "block" }}>
+          {edges.map(([p, ch], i) => <line key={i} x1={p.x} y1={p.y + R} x2={ch.x} y2={ch.y - R} stroke={C.edgeLine} strokeWidth={1.5} />)}
+          {nodes.map((n, idx) => {
+            // Priority: inserting > comparing > root > last-inserted > normal
+            const isInserting = n.val === insertingVal;
+            const isComparing = n.val === curVal && !isInserting;
+            const isTreeRoot  = n.val === treeRootVal;
+            const isLast      = n.val === lastInserted && !isInserting && !isComparing && !isTreeRoot;
+
+            const fill = isInserting ? C.accentLight
+                       : isComparing ? C.orangeLight
+                       : isTreeRoot  ? C.tealLight
+                       : isLast      ? C.blueLight
+                       : C.bgSubtle;
+            const bc   = isInserting ? C.accent
+                       : isComparing ? C.orange
+                       : isTreeRoot  ? C.teal
+                       : isLast      ? C.blue
+                       : C.border;
+            const tc   = isInserting ? C.accent
+                       : isComparing ? C.orange
+                       : isTreeRoot  ? C.teal
+                       : isLast      ? C.blue
+                       : C.text;
+            return (
+              <g key={`${n.val}-${idx}`}>
+                {isInserting && <circle cx={n.x} cy={n.y} r={R + 9} fill="none" stroke={C.accentMid} strokeWidth={8} />}
+                <circle cx={n.x} cy={n.y} r={R} fill={fill} stroke={bc} strokeWidth={isInserting ? 2.5 : 1.5} style={{ transition: "all .25s" }} />
+                <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central" fill={tc} fontSize={13} fontWeight={isInserting ? "700" : "500"} fontFamily={C.mono}>{n.val}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
       <div style={{ fontFamily: C.mono, fontSize: 11, color: C.dim, marginTop: 6 }}>In-order traversal of a BST always gives sorted output.</div>
     </div>
   );
@@ -512,8 +589,57 @@ export function BSTDiagram({ step }) {
 // 5. GRAPH
 // ═══════════════════════════════════════════════════════════════════════════
 
-const GP = { 0:{x:200,y:52}, 1:{x:100,y:152}, 2:{x:300,y:152}, 3:{x:40,y:262}, 4:{x:160,y:262}, 5:{x:300,y:262} };
-const GE = [[0,1],[0,2],[1,3],[1,4],[2,5]];
+// FIX: dynamic graph layout — computes node positions from the actual graph structure
+function buildGraphLayout(graph) {
+  const nodes = Object.keys(graph).map(Number).sort((a, b) => a - b);
+  if (nodes.length === 0) return { positions: {}, edges: [] };
+
+  // Build edge list (undirected, dedup)
+  const edgeSet = new Set();
+  const edges = [];
+  for (const [src, nbrs] of Object.entries(graph)) {
+    for (const nb of nbrs) {
+      const key = [Math.min(+src,nb), Math.max(+src,nb)].join("-");
+      if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([+src, nb]); }
+    }
+  }
+
+  // Layout: BFS-based levels, then spread within each level
+  const levels = {};
+  const visited = new Set();
+  const queue = [nodes[0]];
+  levels[nodes[0]] = 0;
+  visited.add(nodes[0]);
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const nb of (graph[cur] || [])) {
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        levels[nb] = (levels[cur] || 0) + 1;
+        queue.push(nb);
+      }
+    }
+  }
+  // Any disconnected nodes go on their own level
+  nodes.forEach(n => { if (levels[n] === undefined) levels[n] = 3; });
+
+  // Group by level
+  const byLevel = {};
+  for (const [n, lv] of Object.entries(levels)) {
+    if (!byLevel[lv]) byLevel[lv] = [];
+    byLevel[lv].push(+n);
+  }
+  const W = 420, yGap = 80, xPad = 50;
+  const positions = {};
+  for (const [lv, ns] of Object.entries(byLevel)) {
+    const y = 52 + parseInt(lv) * yGap;
+    const slotW = (W - xPad * 2) / Math.max(ns.length, 1);
+    ns.forEach((n, i) => {
+      positions[n] = { x: xPad + slotW * i + slotW / 2, y };
+    });
+  }
+  return { positions, edges };
+}
 
 export function GraphDiagram({ step, algorithmKey }) {
   if (!step) return null;
@@ -524,6 +650,28 @@ export function GraphDiagram({ step, algorithmKey }) {
   const activeNode = vars.node  !== undefined ? parseInt(vars.node)  : vars.start !== undefined ? parseInt(vars.start) : -1;
   const enqueuedN  = vars.enqueued !== undefined ? parseInt(vars.enqueued) : -1;
   const orderMap   = {}; orderArr.forEach((n, i) => { orderMap[n] = i + 1; });
+
+  // FIX: use _graph embedded in every step by simulator — never loses nodes
+  const defaultGraph = { 0:[1,2], 1:[0,3,4], 2:[0,5], 3:[1], 4:[1], 5:[2] };
+  let graph = step._graph || defaultGraph;
+  // Also try to parse from vars.graph string as fallback
+  if (!step._graph) {
+    try {
+      const gStr = String(vars.graph || "");
+      if (gStr.includes(":")) {
+        const parsed = {};
+        const re = /(\d+):\s*\[([^\]]*)\]/g;
+        let m;
+        while ((m = re.exec(gStr)) !== null) {
+          parsed[parseInt(m[1])] = m[2].split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+        }
+        if (Object.keys(parsed).length > 0) graph = parsed;
+      }
+    } catch {}
+  }
+
+  const { positions: GP2, edges: GE2 } = buildGraphLayout(graph);
+  const allNodes = Object.keys(GP2).map(Number);
 
   const dfsCallStack = algorithmKey === "dfs"
     ? (step.stack || []).filter(f => f.fn === "dfs" && f.vars?.node !== undefined).map(f => parseInt(f.vars.node)).filter(n => !isNaN(n))
@@ -545,7 +693,9 @@ export function GraphDiagram({ step, algorithmKey }) {
     queued:    { fill: C.orangeLight, stroke: C.orange, lbl: C.orange },
     unvisited: { fill: C.bgSubtle,    stroke: C.border, lbl: C.muted  },
   };
-  const W = 400, H = 320, R = 24;
+  const R = 24;
+  const maxY = Math.max(...Object.values(GP2).map(p => p.y), 260);
+  const W = 420, H = maxY + 60;
 
   return (
     <div style={card}>
@@ -557,21 +707,24 @@ export function GraphDiagram({ step, algorithmKey }) {
         { color: C.blue,   label: "Just Found" },
         { color: C.muted,  label: "Unvisited" },
       ]} />
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 300, display: "block" }}>
-        {GE.map(([a, b]) => {
-          const pa = GP[a], pb = GP[b];
-          const dx = pb.x - pa.x, dy = pb.y - pa.y, dist = Math.sqrt(dx*dx+dy*dy);
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight: 340, display: "block" }}>
+        {GE2.map(([a, b], idx) => {
+          const pa = GP2[a], pb = GP2[b];
+          if (!pa || !pb) return null;
+          const dx = pb.x - pa.x, dy = pb.y - pa.y, dist = Math.sqrt(dx*dx+dy*dy) || 1;
           const ux = dx/dist, uy = dy/dist;
           const isAct = a === activeNode || b === activeNode;
           const aV = visited.has(a) || a === activeNode, bV = visited.has(b) || b === activeNode;
-          return <line key={`${a}-${b}`} x1={pa.x+ux*R} y1={pa.y+uy*R} x2={pb.x-ux*R} y2={pb.y-uy*R}
+          return <line key={idx} x1={pa.x+ux*R} y1={pa.y+uy*R} x2={pb.x-ux*R} y2={pb.y-uy*R}
             stroke={isAct ? C.accentBorder : aV&&bV ? C.tealBorder : C.edgeLine}
             strokeWidth={isAct ? 2.5 : aV&&bV ? 2 : 1.5}
             strokeDasharray={aV&&bV ? "none" : "5,4"}
             style={{ transition: "stroke .3s" }} />;
         })}
-        {Object.entries(GP).map(([idS, pos]) => {
-          const id = parseInt(idS), st = getState(id), col = NC[st], badge = orderMap[id];
+        {allNodes.map(id => {
+          const pos = GP2[id];
+          if (!pos) return null;
+          const st = getState(id), col = NC[st], badge = orderMap[id];
           return (
             <g key={id}>
               {st === "active" && <circle cx={pos.x} cy={pos.y} r={R+9} fill="none" stroke={C.accentMid} strokeWidth={8} />}
@@ -623,12 +776,21 @@ export function GraphDiagram({ step, algorithmKey }) {
 // 6. DYNAMIC PROGRAMMING
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function FibDPDiagram({ step }) {
+export function FibDPDiagram({ step, allSteps }) {
   const vars = step?.stack?.[0]?.vars || {};
   const n    = vars.n !== undefined ? parseInt(vars.n) : -1;
   const memo = {};
   String(vars.memo || "").replace(/(\d+):(\d+)/g, (_, k, v) => { memo[parseInt(k)] = parseInt(v); });
-  const slots = Array.from({ length: Math.min(Math.max(n + 2, 8), 12) }, (_, i) => i);
+  // Derive total slots from the max i value seen across ALL steps (respects edited range(N))
+  let maxI = 7;
+  if (Array.isArray(allSteps)) {
+    for (const s of allSteps) {
+      const sv = s?.stack?.[0]?.vars;
+      if (sv?.i !== undefined) { const v = parseInt(sv.i); if (!isNaN(v) && v > maxI) maxI = v; }
+      if (sv?.n !== undefined) { const v = parseInt(sv.n); if (!isNaN(v) && v > maxI) maxI = v; }
+    }
+  }
+  const slots = Array.from({ length: Math.min(maxI + 2, 20) }, (_, i) => i);
   const isHit = step?.note?.includes("Cache hit") || step?.note?.includes("cache hit");
   return (
     <div style={card}>
@@ -794,7 +956,7 @@ export function ProgramDiagram({ step, programKey, allSteps, currentStepIdx }) {
   if (programKey === "bfs" || programKey === "dfs")
     return <GraphDiagram step={step} algorithmKey={programKey} />;
 
-  if (programKey === "fib_dp")   return <FibDPDiagram   step={step} />;
+  if (programKey === "fib_dp")   return <FibDPDiagram   step={step} allSteps={allSteps} />;
   if (programKey === "knapsack") return <KnapsackDiagram step={step} />;
   if (programKey === "lcs")      return <LCSDiagram      step={step} />;
 

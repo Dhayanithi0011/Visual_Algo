@@ -79,7 +79,7 @@ const FEATURES = [
     icon: FiTarget,
     accent: "#4ec9b0",
     glow: "rgba(78,201,176,0.15)",
-    tag: "Gap Detector",
+    tag: "Quiz",
     title: "Quiz-Based Knowledge Gaps",
     desc: "Answer algorithm quizzes per program. VisuAlgo maps exactly which concepts you've mastered and which need work — with a progress streak to keep you going.",
     bullets: ["20 program quizzes", "Chapter progress tracking", "Daily streak system"],

@@ -498,15 +498,13 @@ print(f"Found at index: {result}")`,
           complexity: { time: "O(√n)", space: "O(1)" },
           keyInsight: "Jump Search's O(√n) beats Linear Search but is slower than Binary Search O(log n). Its advantage is fewer back-comparisons than Binary Search, which matters for systems where backward traversal is costly (like tape storage).",
         },
-        code: `import math
-
-def jump_search(arr, target):
+        code: `def jump_search(arr, target):
     n = len(arr)
-    step = int(math.sqrt(n))
+    step = int(n ** 0.5)
     prev = 0
     while arr[min(step, n)-1] < target:
         prev = step
-        step += int(math.sqrt(n))
+        step += int(n ** 0.5)
         if prev >= n:
             return -1
     while arr[prev] < target:
@@ -741,9 +739,7 @@ inorder(root)`,
           complexity: { time: "O(V + E) — vertices + edges", space: "O(V) — queue storage" },
           keyInsight: "BFS finds the SHORTEST PATH in an unweighted graph. This is why it's used in GPS navigation (hop count), social network degrees of separation, and finding the nearest exit in a maze.",
         },
-        code: `from collections import deque
-
-graph = {
+        code: `graph = {
     0: [1, 2],
     1: [0, 3, 4],
     2: [0, 5],
@@ -752,12 +748,12 @@ graph = {
     5: [2]
 }
 
-def bfs(start):
+def bfs(graph, start):
     visited = set([start])
-    queue = deque([start])
+    queue = [start]
     order = []
     while queue:
-        node = queue.popleft()
+        node = queue.pop(0)
         order.append(node)
         for nb in graph[node]:
             if nb not in visited:
@@ -765,7 +761,7 @@ def bfs(start):
                 queue.append(nb)
     return order
 
-print(bfs(0))`,
+print(bfs(graph, 0))`,
       },
       {
         key: "dfs",
@@ -858,7 +854,7 @@ dfs(0)`,
     memo[n] = fib_memo(n-1, memo) + fib_memo(n-2, memo)
     return memo[n]
 
-for i in range(8):
+for i in range(10):
     print(f"fib({i}) = {fib_memo(i)}")`,
       },
       {
