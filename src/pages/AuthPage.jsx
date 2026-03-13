@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   FiMail, FiLock, FiUser, FiPhone, FiEye, FiEyeOff,
   FiArrowRight, FiArrowLeft, FiAlertCircle, FiCheckCircle,
-  FiRefreshCw, FiCode
+  FiRefreshCw, FiCode, FiHome
 } from "react-icons/fi";
 import { useAuth } from "../services/useAuth";
 import "./AuthPage.css";
@@ -20,18 +20,16 @@ function GoogleIcon() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-// We store phone accounts as fake emails so Firebase Email/Password handles auth
-// without needing Blaze billing. The user never sees the fake email.
 const PHONE_DOMAIN = "phone.visualgo.app";
 const phoneToFakeEmail = (countryCode, digits) =>
   `${countryCode.replace("+", "")}${digits}@${PHONE_DOMAIN}`;
 
 const COUNTRY_CODES = [
+  { code: "+91",  label: "🇮🇳 +91  India"        },
   { code: "+60",  label: "🇲🇾 +60  Malaysia"     },
   { code: "+65",  label: "🇸🇬 +65  Singapore"    },
   { code: "+1",   label: "🇺🇸 +1   USA / Canada" },
   { code: "+44",  label: "🇬🇧 +44  UK"           },
-  { code: "+91",  label: "🇮🇳 +91  India"        },
   { code: "+61",  label: "🇦🇺 +61  Australia"    },
   { code: "+49",  label: "🇩🇪 +49  Germany"      },
   { code: "+33",  label: "🇫🇷 +33  France"       },
@@ -55,11 +53,13 @@ function Alert({ msg, type = "error" }) {
 }
 
 // ─── Floating-label input ────────────────────────────────────────────────────
+// FIX: use `hasValue` derived from value length so the label always floats
+// when there's content — fixes mobile autofill / pre-fill overlap
 function AuthInput({ icon: Icon, label, type = "text", value, onChange, autoComplete, rightSlot, disabled }) {
   const [focused, setFocused] = useState(false);
-  const hasValue = value?.length > 0;
+  const hasValue = value != null && String(value).length > 0;
   return (
-    <div className={`auth-field ${focused ? "auth-field-focused" : ""} ${hasValue ? "auth-field-filled" : ""}`}>
+    <div className={`auth-field${focused ? " auth-field-focused" : ""}${hasValue ? " auth-field-filled" : ""}`}>
       <div className="auth-field-icon"><Icon size={14} /></div>
       <div className="auth-field-inner">
         <label className="auth-field-label">{label}</label>
@@ -72,6 +72,8 @@ function AuthInput({ icon: Icon, label, type = "text", value, onChange, autoComp
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
+          // Prevent mobile number keyboard from showing for email field
+          inputMode={type === "email" ? "email" : type === "tel" ? "numeric" : undefined}
         />
       </div>
       {rightSlot && <div className="auth-field-right">{rightSlot}</div>}
@@ -258,7 +260,7 @@ function EmailForm({ onSuccess, onGoogle }) {
       )}
 
       <button type="submit" className="btn btn-primary auth-submit" disabled={busy}>
-        {busy ? <><FiRefreshCw size={13} className="spin" /> Please wait…</>
+        {busy ? <><FiRefreshCw size={13} className="spin" /> Please wait...</>
           : mode === "login"    ? <>Sign In <FiArrowRight size={14} /></>
           : mode === "register" ? <>Create Account <FiArrowRight size={14} /></>
           :                       <>Send Reset Link <FiArrowRight size={14} /></>}
@@ -277,13 +279,12 @@ function EmailForm({ onSuccess, onGoogle }) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// PHONE TAB — Sign In / Register with phone number + password (no SMS/OTP)
-// Uses Firebase Email/Password under the hood with a synthetic email address.
+// PHONE TAB
 // ═════════════════════════════════════════════════════════════════════════════
 function PhoneForm({ onSuccess, onGoogle }) {
   const [mode, setMode]           = useState("login");
   const [name, setName]           = useState("");
-  const [countryCode, setCode]    = useState("+60");
+  const [countryCode, setCode]    = useState("+91");
   const [phone, setPhone]         = useState("");
   const [password, setPass]       = useState("");
   const [confirm, setConfirm]     = useState("");
@@ -291,10 +292,9 @@ function PhoneForm({ onSuccess, onGoogle }) {
   const [error, setError]         = useState("");
 
   const { signInWithEmail, registerWithEmail } = useAuth();
-
   const clear = () => setError("");
 
-  const parseError = (code, isRegister) => ({
+  const parseError = (code) => ({
     "auth/email-already-in-use":   "An account with this phone number already exists.",
     "auth/user-not-found":         "No account found for this number.",
     "auth/invalid-credential":     "Incorrect phone number or password.",
@@ -317,19 +317,15 @@ function PhoneForm({ onSuccess, onGoogle }) {
       if (!name.trim())         { setError("Enter your full name."); return; }
       if (password !== confirm) { setError("Passwords don't match."); return; }
       setBusy(true);
-      try {
-        await registerWithEmail(name.trim(), fakeEmail, password);
-        onSuccess();
-      } catch (err) { setError(parseError(err.code, true)); }
+      try { await registerWithEmail(name.trim(), fakeEmail, password); onSuccess(); }
+      catch (err) { setError(parseError(err.code)); }
       setBusy(false);
       return;
     }
 
     setBusy(true);
-    try {
-      await signInWithEmail(fakeEmail, password);
-      onSuccess();
-    } catch (err) { setError(parseError(err.code, false)); }
+    try { await signInWithEmail(fakeEmail, password); onSuccess(); }
+    catch (err) { setError(parseError(err.code)); }
     setBusy(false);
   };
 
@@ -377,7 +373,7 @@ function PhoneForm({ onSuccess, onGoogle }) {
       <Alert msg={error} type="error" />
 
       <button type="submit" className="btn btn-primary auth-submit" disabled={busy}>
-        {busy ? <><FiRefreshCw size={13} className="spin" /> Please wait…</>
+        {busy ? <><FiRefreshCw size={13} className="spin" /> Please wait...</>
           : mode === "login" ? <>Sign In <FiArrowRight size={14} /></>
           :                    <>Create Account <FiArrowRight size={14} /></>}
       </button>
@@ -398,33 +394,34 @@ const TABS = [
   { id: "phone", label: "Phone",  Icon: FiPhone },
 ];
 
-export default function AuthPage({ onSuccess }) {
+export default function AuthPage({ onSuccess, onBack }) {
   const [tab, setTab]       = useState("email");
   const [gBusy, setGBusy]   = useState(false);
   const [gError, setGError] = useState("");
 
   const { signInWithGoogle } = useAuth();
 
-  const IS_LOCAL = window.location.hostname === "localhost" ||
-                   window.location.hostname === "127.0.0.1";
-
+  // FIX: always use popup — universally works on all domains without needing
+  // each deployment URL to be whitelisted in Firebase Console.
+  // Popup is reliable on modern browsers; only add redirect as last resort.
   const handleGoogle = async () => {
     setGError("");
     setGBusy(true);
     try {
       await signInWithGoogle();
-      // On localhost: signInWithPopup returns immediately → call onSuccess
-      // On production: signInWithRedirect navigates away → page reloads,
-      // onAuthStateChanged fires automatically, no need to call onSuccess here
-      if (IS_LOCAL) onSuccess();
+      onSuccess();
     } catch (err) {
       if (err.code !== "auth/popup-closed-by-user" &&
           err.code !== "auth/cancelled-popup-request") {
-        setGError("Google sign-in failed. Please try again.");
+        // If popup blocked by browser, show a clear message
+        if (err.code === "auth/popup-blocked") {
+          setGError("Popup was blocked. Please allow popups for this site and try again.");
+        } else {
+          setGError("Google sign-in failed. Please try again.");
+        }
       }
-      setGBusy(false);
     }
-    if (IS_LOCAL) setGBusy(false);
+    setGBusy(false);
   };
 
   return (
@@ -480,6 +477,15 @@ export default function AuthPage({ onSuccess }) {
       {/* ── Right panel — form ────────────────────────────────────── */}
       <div className="auth-right">
         <div className="auth-card">
+
+          {/* Back to Home button */}
+          {onBack && (
+            <button className="auth-back-btn" type="button" onClick={onBack}>
+              <FiArrowLeft size={13} />
+              Back to Home
+            </button>
+          )}
+
           <div className="auth-header">
             <h2 className="auth-title">Welcome to VisuAlgo</h2>
             <p className="auth-subtitle">Sign in or create an account to get started</p>

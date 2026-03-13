@@ -455,132 +455,267 @@ export function QueueImplDiagram({ step }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 4b. BINARY SEARCH TREE — Stable layout + graph-style highlighting
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── BST helpers ──────────────────────────────────────────────────────────────
+
 function buildBST(vals) {
   let root = null;
-  function ins(nd, v) { if (!nd) return { val: v, left: null, right: null }; if (v < nd.val) nd.left = ins(nd.left, v); else nd.right = ins(nd.right, v); return nd; }
+  function ins(nd, v) {
+    if (!nd) return { val: v, left: null, right: null };
+    if (v < nd.val) nd.left = ins(nd.left, v);
+    else nd.right = ins(nd.right, v);
+    return nd;
+  }
   vals.forEach(v => { root = ins(root, v); });
   return root;
 }
-function layoutBST(nd, depth = 0, xc = { v: 0 }) {
-  if (!nd) return null;
-  nd.left  = layoutBST(nd.left,  depth + 1, xc);
-  nd.right = layoutBST(nd.right, depth + 1, xc);
-  nd.y = depth * 68;
-  if (!nd.left && !nd.right) { nd.x = xc.v * 62; xc.v++; }
-  else if (nd.left && !nd.right)  { nd.x = nd.left.x; }
-  else if (!nd.left && nd.right)  { nd.x = nd.right.x; }
-  else { nd.x = (nd.left.x + nd.right.x) / 2; }
-  return nd;
+
+/** Reingold-Tilford-style: assign in-order index as x, depth as y */
+function layoutBST(root) {
+  if (!root) return [];
+  const YGAP = 70, XGAP = 56;
+
+  let counter = 0;
+  function assignIdx(nd) {
+    if (!nd) return;
+    assignIdx(nd.left);
+    nd._idx = counter++;
+    assignIdx(nd.right);
+  }
+  assignIdx(root);
+
+  function assignCoords(nd, depth) {
+    if (!nd) return;
+    nd.x = nd._idx * XGAP;
+    nd.y = depth * YGAP;
+    assignCoords(nd.left,  depth + 1);
+    assignCoords(nd.right, depth + 1);
+  }
+  assignCoords(root, 0);
+
+  const flat = [];
+  function collect(nd, parent) {
+    if (!nd) return;
+    flat.push({ val: nd.val, x: nd.x, y: nd.y,
+      px: parent ? parent.x : null,
+      py: parent ? parent.y : null });
+    collect(nd.left,  nd);
+    collect(nd.right, nd);
+  }
+  collect(root, null);
+  return flat;
 }
-function bstNodes(nd, out = []) { if (!nd) return out; bstNodes(nd.left, out); out.push(nd); bstNodes(nd.right, out); return out; }
-function bstEdges(nd, out = []) { if (!nd) return out; if (nd.left) { out.push([nd, nd.left]); bstEdges(nd.left, out); } if (nd.right) { out.push([nd, nd.right]); bstEdges(nd.right, out); } return out; }
 
 export function BSTDiagram({ step }) {
   const vars = step?.stack?.[0]?.vars || {};
+  const fn   = step?.stack?.[0]?.fn   || "";
 
-  // ── Which value is currently being inserted? ─────────────────────────────────
-  // Outer step ("Inserting value X"): vars.inserting is set
-  // Recursive insert() steps: vars.val holds the value being inserted
-  // inorder() steps: neither is relevant — no highlight needed
-  const insertingVal = vars.inserting !== undefined
-    ? parseInt(vars.inserting)
-    : vars.val !== undefined && (step?.stack?.[0]?.fn === "insert" || String(vars.val).match(/^\d+$/))
-      ? parseInt(vars.val)
-      : null;
+  // ── Stable full-tree layout uses bst_all_vals (all values to be inserted) ──
+  const allVals     = Array.isArray(step?.bst_all_vals)    ? step.bst_all_vals    : [];
+  const insertedArr = Array.isArray(step?.inserted_so_far) ? step.inserted_so_far : [];
 
-  // The node we are currently COMPARING against (root/node param in insert)
-  // vars.root looks like "Node(5)" — extract the number
-  const curVal = (() => {
-    const rootStr = String(vars.root || "");
-    const m = rootStr.match(/Node\((\d+)\)/);
-    if (m) return parseInt(m[1]);
+  // ── Current step state ───────────────────────────────────────────────────
+  const insertingVal = (() => {
+    if (vars.inserting !== undefined) return parseInt(vars.inserting);
+    if (fn === "insert" && vars.val !== undefined) return parseInt(vars.val);
     return null;
   })();
 
-  // Use inserted_so_far from simulator for progressive tree building
-  const insertedArr  = Array.isArray(step?.inserted_so_far) ? step.inserted_so_far : [];
-
-  // Build the visible node set:
-  // – If we have a confirmed inserted list, show those + the value currently being inserted
-  // – Otherwise empty
-  const allVals = (() => {
-    if (insertedArr.length > 0) {
-      // Include the value being inserted if it hasn't been committed yet
-      if (insertingVal !== null && !insertedArr.includes(insertingVal))
-        return [...insertedArr, insertingVal];
-      return insertedArr;
-    }
-    if (insertingVal !== null) return [insertingVal];
-    return [];
+  const comparingVal = (() => {
+    const m = String(vars.root || "").match(/Node\((\d+)\)/);
+    return m ? parseInt(m[1]) : null;
   })();
 
-  const rawRoot = allVals.length > 0 ? buildBST(allVals) : null;
-  if (!rawRoot) return (
-    <div style={card}>
-      <div style={label}>Binary Search Tree</div>
-      <div style={{ fontFamily: C.mono, fontSize: 12, color: C.dim, padding: "20px 0" }}>Tree is empty — values will appear as they are inserted.</div>
-    </div>
-  );
+  const inorderVal = (() => {
+    if (fn === "inorder") {
+      const m = String(vars.root || "").match(/Node\((\d+)\)/);
+      return m ? parseInt(m[1]) : null;
+    }
+    return null;
+  })();
 
-  // Deep-clone before layout mutation; capture root value before layout mutates the object
-  const rootClone = JSON.parse(JSON.stringify(rawRoot));
-  const treeRootVal = rootClone.val; // first-inserted value is always the BST root
-  const root  = layoutBST(rootClone);
-  const nodes = bstNodes(root), edges = bstEdges(root);
-  const minX  = Math.min(...nodes.map(n => n.x));
-  nodes.forEach(n => n.x -= minX - 28);
-  const maxX = Math.max(...nodes.map(n => n.x)) + 52;
-  const maxY = Math.max(...nodes.map(n => n.y)) + 48;
+  // Collect printed inorder values from note text
+  const printedSet = (() => {
+    const m = String(step?.note || "").match(/\[([0-9, ]+)\]/);
+    if (!m) return new Set();
+    return new Set(m[1].split(",").map(s => parseInt(s.trim())).filter(n => !isNaN(n)));
+  })();
+
+  // Visible nodes = inserted so far + currently inserting
+  const visibleSet = new Set(insertedArr);
+  if (insertingVal !== null) visibleSet.add(insertingVal);
+
+  if (visibleSet.size === 0) {
+    return (
+      <div style={card}>
+        <div style={label}>Binary Search Tree</div>
+        <div style={{ fontFamily: C.mono, fontSize: 13, color: C.dim, padding: "24px 0", textAlign: "center" }}>
+          Tree is empty — values will appear as they are inserted.
+        </div>
+      </div>
+    );
+  }
+
+  // Build STABLE layout from full final value list — nodes never shift position
+  const layoutVals = allVals.length > 0 ? allVals : [...visibleSet];
+  const fullTree   = buildBST(JSON.parse(JSON.stringify(layoutVals)));
+  const allNodes   = layoutBST(fullTree);
+
+  // Only render nodes that have been inserted so far
+  const visibleNodes = allNodes.filter(n => visibleSet.has(n.val));
+
   const R = 22;
-
-  // Determine what the last inserted (fully committed) node is for a subtle highlight
+  const treeRootVal  = layoutVals[0];
   const lastInserted = insertedArr.length > 0 ? insertedArr[insertedArr.length - 1] : null;
 
+  // SVG sizing — derived from full layout (stable dimensions)
+  const xs = allNodes.map(n => n.x), ys = allNodes.map(n => n.y);
+  const rawMinX = Math.min(...xs), rawMaxX = Math.max(...xs);
+  const rawMinY = Math.min(...ys), rawMaxY = Math.max(...ys);
+  const PAD  = R + 18;
+  const svgW = (rawMaxX - rawMinX) + R * 2 + PAD * 2;
+  const svgH = (rawMaxY - rawMinY) + R * 2 + PAD * 2;
+  const offX = PAD + R - rawMinX;
+  const offY = PAD + R - rawMinY;
+
+  // Node colour priority: inserting-active > comparing > inorder-active > printed/root > last > default
+  const getNodeStyle = (val) => {
+    const isInsActive = val === insertingVal && fn === "insert";
+    const isComparing = val === comparingVal  && fn === "insert" && !isInsActive;
+    const isInActive  = val === inorderVal;
+    const isPrinted   = printedSet.has(val);
+    const isRoot      = val === treeRootVal;
+    const isLast      = val === lastInserted && !isInsActive && !isComparing && !isInActive;
+
+    if (isInsActive) return { fill: C.accentLight, stroke: C.accent, tc: C.accent, ring: true,  fw: "700" };
+    if (isComparing) return { fill: C.orangeLight, stroke: C.orange, tc: C.orange, ring: false, fw: "600" };
+    if (isInActive)  return { fill: C.accentLight, stroke: C.accent, tc: C.accent, ring: true,  fw: "700" };
+    if (isPrinted)   return { fill: C.tealLight,   stroke: C.teal,   tc: C.teal,   ring: false, fw: "600" };
+    if (isRoot)      return { fill: C.tealLight,   stroke: C.teal,   tc: C.teal,   ring: false, fw: "600" };
+    if (isLast)      return { fill: C.blueLight,   stroke: C.blue,   tc: C.blue,   ring: false, fw: "500" };
+    return                  { fill: C.bgSubtle,    stroke: C.border, tc: C.text,   ring: false, fw: "500" };
+  };
+
+  // Edges between visible nodes only
+  const edges = visibleNodes
+    .filter(n => n.px !== null)
+    .map(n => {
+      const parent = visibleNodes.find(p => p.x === n.px && p.y === n.py);
+      if (!parent) return null;
+      const dx = (n.x + offX) - (parent.x + offX);
+      const dy = (n.y + offY) - (parent.y + offY);
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ux = dx/dist, uy = dy/dist;
+      const pStyle = getNodeStyle(parent.val);
+      const cStyle = getNodeStyle(n.val);
+      const bothActive = pStyle.stroke !== C.border && cStyle.stroke !== C.border;
+      return {
+        x1: parent.x + offX + ux * R, y1: parent.y + offY + uy * R,
+        x2: n.x      + offX - ux * R, y2: n.y      + offY - uy * R,
+        stroke: bothActive ? pStyle.stroke : C.edgeLine,
+        width:  bothActive ? 2 : 1.5,
+        pVal: parent.val, cVal: n.val,
+      };
+    })
+    .filter(Boolean);
+
+  // Status banner
+  const banner = (() => {
+    if (fn === "insert" && insertingVal !== null && comparingVal !== null)
+      return {
+        text:  `Comparing ${insertingVal} with node ${comparingVal} → go ${insertingVal < comparingVal ? "LEFT ←" : "RIGHT →"}`,
+        color: C.orange, bg: C.orangeLight, border: C.orangeBorder,
+      };
+    if (fn === "insert" && insertingVal !== null)
+      return { text: `Inserting ${insertingVal} into tree`, color: C.accent, bg: C.accentLight, border: C.accentBorder };
+    if (fn === "inorder" && inorderVal !== null)
+      return { text: `Visiting node ${inorderVal} — in-order print`, color: C.accent, bg: C.accentLight, border: C.accentBorder };
+    if (printedSet.size > 0)
+      return { text: `In-order so far: [ ${[...printedSet].join(", ")} ]`, color: C.teal, bg: C.tealLight, border: C.tealBorder };
+    return null;
+  })();
+
   return (
-    <div style={{ ...card, overflowX: "auto", overflowY: "auto" }}>
+    <div style={{ ...card, display: "flex", flexDirection: "column", alignItems: "stretch" }}>
       <div style={label}>Binary Search Tree</div>
       <Legend items={[
-        { color: C.accent, label: "Being inserted" },
-        { color: C.orange, label: "Comparing node" },
-        { color: C.teal,   label: "Root" },
-        { color: C.blue,   label: "Last inserted" },
+        { color: C.accent, label: fn === "inorder" ? "Active node"     : "Being inserted" },
+        { color: C.orange, label: "Comparing"      },
+        { color: C.teal,   label: fn === "inorder" ? "Visited / Root"  : "Root"           },
+        { color: C.blue,   label: "Last inserted"  },
       ]} />
-      <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: 340 }}>
-        <svg viewBox={`0 0 ${Math.max(maxX, 200)} ${Math.max(maxY, 100)}`} width={Math.max(maxX, 200)} height={Math.max(maxY, 100)} style={{ display: "block" }}>
-          {edges.map(([p, ch], i) => <line key={i} x1={p.x} y1={p.y + R} x2={ch.x} y2={ch.y - R} stroke={C.edgeLine} strokeWidth={1.5} />)}
-          {nodes.map((n, idx) => {
-            // Priority: inserting > comparing > root > last-inserted > normal
-            const isInserting = n.val === insertingVal;
-            const isComparing = n.val === curVal && !isInserting;
-            const isTreeRoot  = n.val === treeRootVal;
-            const isLast      = n.val === lastInserted && !isInserting && !isComparing && !isTreeRoot;
 
-            const fill = isInserting ? C.accentLight
-                       : isComparing ? C.orangeLight
-                       : isTreeRoot  ? C.tealLight
-                       : isLast      ? C.blueLight
-                       : C.bgSubtle;
-            const bc   = isInserting ? C.accent
-                       : isComparing ? C.orange
-                       : isTreeRoot  ? C.teal
-                       : isLast      ? C.blue
-                       : C.border;
-            const tc   = isInserting ? C.accent
-                       : isComparing ? C.orange
-                       : isTreeRoot  ? C.teal
-                       : isLast      ? C.blue
-                       : C.text;
+      {banner && (
+        <div style={{
+          fontFamily: C.mono, fontSize: 11, color: banner.color,
+          background: banner.bg, border: `1px solid ${banner.border}`,
+          borderRadius: 6, padding: "5px 10px", marginBottom: 10,
+        }}>
+          {banner.text}
+        </div>
+      )}
+
+      {/* SVG — centered */}
+      <div style={{ display: "flex", justifyContent: "center", overflow: "auto" }}>
+        <svg
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          width={svgW}
+          height={svgH}
+          style={{ display: "block", maxWidth: "100%" }}
+        >
+          {edges.map((e, i) => (
+            <line key={i}
+              x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+              stroke={e.stroke} strokeWidth={e.width}
+              style={{ transition: "stroke 0.25s" }}
+            />
+          ))}
+          {visibleNodes.map(n => {
+            const { fill, stroke, tc, ring, fw } = getNodeStyle(n.val);
+            const cx = n.x + offX, cy = n.y + offY;
             return (
-              <g key={`${n.val}-${idx}`}>
-                {isInserting && <circle cx={n.x} cy={n.y} r={R + 9} fill="none" stroke={C.accentMid} strokeWidth={8} />}
-                <circle cx={n.x} cy={n.y} r={R} fill={fill} stroke={bc} strokeWidth={isInserting ? 2.5 : 1.5} style={{ transition: "all .25s" }} />
-                <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="central" fill={tc} fontSize={13} fontWeight={isInserting ? "700" : "500"} fontFamily={C.mono}>{n.val}</text>
+              <g key={n.val}>
+                {ring && (
+                  <circle cx={cx} cy={cy} r={R + 9}
+                    fill="none" stroke={C.accentMid} strokeWidth={8}
+                    style={{ transition: "all 0.25s" }}
+                  />
+                )}
+                <circle cx={cx} cy={cy} r={R}
+                  fill={fill} stroke={stroke}
+                  strokeWidth={ring ? 2.5 : stroke === C.border ? 1.5 : 2}
+                  style={{ transition: "fill 0.25s, stroke 0.25s" }}
+                />
+                <text x={cx} y={cy}
+                  textAnchor="middle" dominantBaseline="central"
+                  fill={tc} fontSize={13} fontWeight={fw} fontFamily={C.mono}
+                >{n.val}</text>
+                {n.val === treeRootVal && (
+                  <text x={cx} y={cy - R - 6}
+                    textAnchor="middle" fill={C.teal}
+                    fontSize={8} fontWeight="700" fontFamily={C.mono}
+                  >ROOT</text>
+                )}
               </g>
             );
           })}
         </svg>
       </div>
-      <div style={{ fontFamily: C.mono, fontSize: 11, color: C.dim, marginTop: 6 }}>In-order traversal of a BST always gives sorted output.</div>
+
+      {printedSet.size > 0 ? (
+        <div style={{ marginTop: 10, fontFamily: C.mono, fontSize: 11, color: C.teal,
+          background: C.tealLight, border: `1px solid ${C.tealBorder}`,
+          borderRadius: 6, padding: "5px 10px" }}>
+          ✅ In-order output: [ {[...printedSet].join(", ")} ] — sorted!
+        </div>
+      ) : (
+        <div style={{ fontFamily: C.mono, fontSize: 10, color: C.dim, marginTop: 6, textAlign: "center" }}>
+          In-order traversal of a BST always gives sorted output.
+        </div>
+      )}
     </div>
   );
 }

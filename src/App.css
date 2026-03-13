@@ -2,21 +2,24 @@
 
 /* ═══════════════════════════════════════════════════
    VS CODE DESIGN SYSTEM — VisuAlgo
-   Palette: VSCode Dark+ / One Dark Pro inspired
+   Dark mode (default) + Light mode toggle
    ═══════════════════════════════════════════════════ */
 :root {
   /* ── Core Surfaces ── */
-  --bg:            #1e1e1e;   /* editor background */
-  --bg-sidebar:    #252526;   /* sidebar / panel bg */
-  --bg-panel:      #2d2d30;   /* tab bar / activity bar */
-  --bg-input:      #3c3c3c;   /* input / dropdown */
-  --bg-hover:      #2a2d2e;   /* hover row */
-  --bg-selected:   #094771;   /* selected / active item */
-  --bg-active:     #1e3a5f;   /* active line */
-  --bg-widget:     #252526;   /* notification / widget */
+  --bg:            #1e1e1e;
+  --bg-sidebar:    #252526;
+  --bg-panel:      #2d2d30;
+  --bg-card:       #252526;
+  --bg-subtle:     #2a2a2a;
+  --bg-input:      #3c3c3c;
+  --bg-hover:      #2a2d2e;
+  --bg-selected:   #094771;
+  --bg-active:     #1e3a5f;
+  --bg-widget:     #252526;
 
   /* ── Borders ── */
   --border:        #3e3e42;
+  --border-mid:    #555;
   --border-light:  #2d2d30;
   --border-focus:  #007acc;
 
@@ -25,30 +28,31 @@
   --vsc-blue-dark: #005f9e;
   --vsc-blue-bg:   #094771;
 
-  /* ── Syntax Highlight Colors (One Dark Pro) ── */
-  --syn-keyword:   #c586c0;   /* purple  — if, def, return */
-  --syn-fn:        #dcdcaa;   /* yellow  — function names */
-  --syn-string:    #ce9178;   /* orange  — strings */
-  --syn-number:    #b5cea8;   /* green   — numbers */
-  --syn-comment:   #6a9955;   /* green   — comments */
-  --syn-type:      #4ec9b0;   /* teal    — class names */
-  --syn-var:       #9cdcfe;   /* light blue — variables */
-  --syn-operator:  #d4d4d4;   /* white   — operators */
+  /* ── Syntax Colors ── */
+  --syn-keyword:   #c586c0;
+  --syn-fn:        #dcdcaa;
+  --syn-string:    #ce9178;
+  --syn-number:    #b5cea8;
+  --syn-comment:   #6a9955;
+  --syn-type:      #4ec9b0;
+  --syn-var:       #9cdcfe;
+  --syn-operator:  #d4d4d4;
   --syn-property:  #9cdcfe;
-  --syn-param:     #fd9e5a;   /* warm orange — params */
+  --syn-param:     #fd9e5a;
 
   /* ── Text ── */
-  --text:          #d4d4d4;   /* primary text */
-  --text-muted:    #858585;   /* secondary / placeholder */
-  --text-dim:      #4d4d4d;   /* very faint */
+  --text:          #d4d4d4;
+  --text-muted:    #858585;
+  --text-dim:      #4d4d4d;
   --text-bright:   #ffffff;
   --text-link:     #4db6f7;
 
-  /* ── Semantic (used in JSX inline styles) ── */
-  --accent:        #007acc;   /* VSCode blue — primary actions */
+  /* ── Accent ── */
+  --accent:        #007acc;
   --accent-light:  rgba(0,122,204,0.15);
   --accent-dark:   #005f9e;
 
+  /* ── Semantic colors ── */
   --green:         #4ec9b0;
   --green-dim:     #23443d;
   --green-light:   rgba(78,201,176,0.15);
@@ -76,25 +80,107 @@
   --blue-light:    rgba(77,182,247,0.15);
   --blue-dim:      #0d2a3d;
 
-  /* ── Status Bar Colors ── */
+  /* ── Editor surface (code panels) ── */
+  --editor-bg:     #1e1e2e;
+  --editor-text:   #c9cdd9;
+  --editor-dim:    #3d3d5c;
+  --editor-scroll: #3a3a5c;
+
+  /* ── Status ── */
   --status-bg:     #007acc;
   --status-text:   #ffffff;
 
   /* ── Fonts ── */
-  --font-sans:     "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono:     "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:  "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
 
-  /* ── Sizes ── */
-  --radius-sm:     3px;
-  --radius:        4px;
-  --radius-md:     6px;
-  --radius-lg:     8px;
+  /* ── Radii ── */
+  --radius-sm: 3px;
+  --radius:    4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 
   /* ── Shadows ── */
-  --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
-  --shadow:        0 4px 14px rgba(0,0,0,0.5);
-  --shadow-lg:     0 12px 36px rgba(0,0,0,0.6);
-  --shadow-float:  0 8px 24px rgba(0,0,0,0.7);
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
+  --shadow:       0 4px 14px rgba(0,0,0,0.5);
+  --shadow-lg:    0 12px 36px rgba(0,0,0,0.6);
+  --shadow-float: 0 8px 24px rgba(0,0,0,0.7);
+}
+
+/* ═══════════════════════════════════════════════════
+   LIGHT MODE — all overrides under [data-theme="light"]
+   Dark mode variables above are NEVER changed.
+   ═══════════════════════════════════════════════════ */
+[data-theme="light"] {
+  /* ── Core Surfaces ── */
+  --bg:            #f8f8f8;
+  --bg-sidebar:    #ffffff;
+  --bg-panel:      #f0f0f0;
+  --bg-card:       #ffffff;
+  --bg-subtle:     #f5f5f5;
+  --bg-input:      #ebebeb;
+  --bg-hover:      #e8e8e8;
+  --bg-selected:   #cce5ff;
+  --bg-active:     #dbeafe;
+  --bg-widget:     #ffffff;
+
+  /* ── Borders ── */
+  --border:        #d0d0d0;
+  --border-mid:    #b0b0b0;
+  --border-light:  #e8e8e8;
+  --border-focus:  #007acc;
+
+  /* ── Text ── */
+  --text:          #1a1a1a;
+  --text-muted:    #555555;
+  --text-dim:      #888888;
+  --text-bright:   #000000;
+  --text-link:     #007acc;
+
+  /* ── Accent ── */
+  --accent:        #0066b8;
+  --accent-light:  rgba(0,102,184,0.1);
+  --accent-dark:   #004f8c;
+
+  /* ── Semantic ── */
+  --green:         #16a34a;
+  --green-dim:     #dcfce7;
+  --green-light:   rgba(22,163,74,0.12);
+
+  --orange:        #c2410c;
+  --orange-dim:    #fff7ed;
+  --orange-light:  rgba(194,65,12,0.1);
+
+  --red:           #dc2626;
+  --red-dim:       #fef2f2;
+  --red-light:     rgba(220,38,38,0.1);
+
+  --yellow:        #854d0e;
+  --yellow-dim:    #fefce8;
+
+  --purple:        #7c3aed;
+  --purple-dim:    #f5f3ff;
+  --purple-light:  rgba(124,58,237,0.1);
+
+  --teal:          #0d9488;
+  --teal-dim:      #f0fdfa;
+  --teal-light:    rgba(13,148,136,0.1);
+
+  --blue:          #2563eb;
+  --blue-light:    rgba(37,99,235,0.1);
+  --blue-dim:      #eff6ff;
+
+  /* ── Editor panels become light in light mode ── */
+  --editor-bg:     #f5f5f5;
+  --editor-text:   #1a1a1a;
+  --editor-dim:    #888888;
+  --editor-scroll: #cccccc;
+
+  /* ── Shadows lighter ── */
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.1);
+  --shadow:       0 4px 14px rgba(0,0,0,0.12);
+  --shadow-lg:    0 12px 36px rgba(0,0,0,0.15);
+  --shadow-float: 0 8px 24px rgba(0,0,0,0.18);
 }
 
 /* ── Reset ── */
@@ -115,6 +201,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s, color 0.2s;
 }
 
 h1, h2, h3, h4, h5, h6 { margin: 0; }
@@ -125,11 +212,8 @@ input, textarea, select { font-family: inherit; }
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: #424242;
-  border-radius: 0;
-}
-::-webkit-scrollbar-thumb:hover { background: #555; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 /* ── App Shell ── */
@@ -142,7 +226,7 @@ input, textarea, select { font-family: inherit; }
 
 .main-content {
   flex: 1;
-  padding-top: 48px; /* navbar height */
+  padding-top: 48px;
 }
 
 /* ── Container ── */
@@ -150,6 +234,10 @@ input, textarea, select { font-family: inherit; }
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 28px;
+}
+
+@media (max-width: 768px) {
+  .container { padding: 0 16px; }
 }
 
 /* ════════════════════════════════════════════════
@@ -167,27 +255,27 @@ input, textarea, select { font-family: inherit; }
 }
 
 .badge-accent {
-  background: var(--vsc-blue-bg);
-  color: #4db6f7;
+  background: var(--accent-light);
+  color: var(--accent);
   border: 1px solid rgba(0,122,204,0.4);
 }
 .badge-blue {
-  background: rgba(77,182,247,0.12);
-  color: #4db6f7;
+  background: var(--blue-light);
+  color: var(--blue);
   border: 1px solid rgba(77,182,247,0.3);
 }
 .badge-orange {
-  background: var(--orange-dim);
+  background: var(--orange-light);
   color: var(--orange);
   border: 1px solid rgba(253,158,90,0.25);
 }
 .badge-purple {
-  background: var(--purple-dim);
+  background: var(--purple-light);
   color: var(--purple);
   border: 1px solid rgba(197,134,192,0.25);
 }
 .badge-green {
-  background: var(--green-dim);
+  background: var(--green-light);
   color: var(--green);
   border: 1px solid rgba(78,201,176,0.25);
 }
@@ -214,27 +302,20 @@ input, textarea, select { font-family: inherit; }
 }
 
 .btn-primary {
-  background: var(--vsc-blue);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--vsc-blue);
+  border-color: var(--accent);
 }
-.btn-primary:hover { background: #1b8fdd; border-color: #1b8fdd; }
-.btn-primary:active { background: var(--vsc-blue-dark); }
-.btn-primary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+.btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.btn-primary:active { background: var(--accent-dark); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-outline {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
 }
-.btn-outline:hover {
-  background: var(--bg-hover);
-  border-color: #555;
-  color: var(--text-bright);
-}
+.btn-outline:hover { background: var(--bg-hover); border-color: var(--border-mid); color: var(--text-bright); }
 
 .btn-ghost {
   background: transparent;
@@ -242,16 +323,13 @@ input, textarea, select { font-family: inherit; }
   border: none;
   padding: 5px 10px;
 }
-.btn-ghost:hover {
-  color: var(--text);
-  background: var(--bg-hover);
-}
+.btn-ghost:hover { color: var(--text); background: var(--bg-hover); }
 
 /* ════════════════════════════════════════════════
    CARDS
    ════════════════════════════════════════════════ */
 .card {
-  background: var(--bg-sidebar);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px;

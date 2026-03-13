@@ -62,7 +62,7 @@ export default function App() {
 
   // ── Not signed in → full-screen auth page ────────────────────────────────
   if (!user) {
-    return <AuthPage onSuccess={() => navigate("home")} />;
+    return <AuthPage onSuccess={() => navigate("home")} onBack={() => navigate("home")} />;
   }
 
   // ── Signed in → full app ──────────────────────────────────────────────────
