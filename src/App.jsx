@@ -5,10 +5,15 @@ import Visualizer from "./pages/Visualizer";
 import LearningPath from "./pages/LearningPath";
 import GapDetector from "./pages/GapDetector";
 import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
 import AuthPage from "./pages/AuthPage";
+import AdminDashboard from "./pages/AdminDashboard";
 import { useAuth } from "./services/useAuth";
 import { useUserProgress } from "./services/useUserProgress";
 import "./App.css";
+
+// ── Admin credentials ─────────────────────────────────────────────────────────
+const ADMIN_EMAILS = ["dhaya00011@gmail.com", "inpa233@gmail.com"];
 
 // Restore last visited page across browser refreshes (same session)
 function getInitialPage() {
@@ -17,34 +22,34 @@ function getInitialPage() {
 
 export default function App() {
   const [activePage, setActivePage] = useState(getInitialPage);
-  // showAuth = true means the auth page is explicitly open
-  const [showAuth, setShowAuth] = useState(false);
+  const [showAuth, setShowAuth]     = useState(false);
+  const [theme, setTheme]           = useState(localStorage.getItem("theme") || "dark");
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  };
+
+  // ── Detect admin ──────────────────────────────────────────────────────────
+  const isAdmin = !!user && ADMIN_EMAILS.includes(user.email);
 
   // ── All persistent progress lives here ────────────────────────────────────
   const {
-    scores,
-    watchedSet,
-    vizSessions,
-    quizHistory,
-    streak,
-    loaded: progressLoaded,
-    recordQuizScore,
-    recordProgramWatched,
+    scores, watchedSet, vizSessions, quizHistory,
+    streak, loaded: progressLoaded,
+    recordQuizScore, recordProgramWatched,
   } = useUserProgress(user);
 
   const navigate = (page) => {
-    if (page === "auth") {
-      // Any page that requires login should open auth overlay
-      setShowAuth(true);
-      return;
-    }
+    if (page === "auth") { setShowAuth(true); return; }
     setShowAuth(false);
     setActivePage(page);
     try { sessionStorage.setItem("vz_page", page); } catch {}
   };
 
-  // ── Callbacks passed down to pages ────────────────────────────────────────
   const handleProgramWatched = (programKey, programLabel) => {
     recordProgramWatched(programKey, programLabel);
   };
@@ -68,8 +73,20 @@ export default function App() {
     );
   }
 
+  // ── Admin users go straight to Admin Dashboard (full-screen, no navbar) ──
+  if (isAdmin) {
+    return (
+      <AdminDashboard
+        onLogout={async () => {
+          await logout();
+          setActivePage("home");
+          try { sessionStorage.setItem("vz_page", "home"); } catch {}
+        }}
+      />
+    );
+  }
+
   // ── Not signed in AND auth page explicitly shown ──────────────────────────
-  // OR: not signed in and trying to visit a protected page
   const protectedPages = ["visualizer", "learning", "gap-detector", "dashboard"];
   const needsAuth = !user && (showAuth || protectedPages.includes(activePage));
 
@@ -78,13 +95,11 @@ export default function App() {
       <AuthPage
         onSuccess={() => {
           setShowAuth(false);
-          // After login, go to whichever page they wanted or home
           const dest = protectedPages.includes(activePage) ? activePage : "home";
           setActivePage(dest);
           try { sessionStorage.setItem("vz_page", dest); } catch {}
         }}
         onBack={() => {
-          // Back just closes auth and shows home — no login required for home
           setShowAuth(false);
           setActivePage("home");
           try { sessionStorage.setItem("vz_page", "home"); } catch {}
@@ -93,12 +108,9 @@ export default function App() {
     );
   }
 
-  // ── Page renderer (works for both signed-in and guest on home) ───────────
+  // ── Page renderer ─────────────────────────────────────────────────────────
   const renderPage = () => {
-    // Guest trying to access protected page → redirect to home
-    if (!user && protectedPages.includes(activePage)) {
-      return <Home onNavigate={navigate} />;
-    }
+    if (!user && protectedPages.includes(activePage)) return <Home onNavigate={navigate} />;
 
     switch (activePage) {
       case "home":
@@ -137,6 +149,15 @@ export default function App() {
             quizHistory={quizHistory}
             streak={streak}
             progressLoaded={progressLoaded}
+          />
+        );
+
+      case "settings":
+        return (
+          <Settings
+            user={user}
+            theme={theme}
+            onThemeToggle={toggleTheme}
           />
         );
 

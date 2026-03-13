@@ -181,7 +181,15 @@ export function clientSidePythonCheck(code) {
 }
 
 // ── Backend validation ────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// On Vercel, the serverless function is at /api/run (relative URL — no host needed).
+// Locally, the FastAPI backend runs on localhost:8000.
+// VITE_API_URL can override both (set blank string in Vercel to use relative path).
+const IS_LOCAL  = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE  = import.meta.env.VITE_API_URL !== undefined
+  ? import.meta.env.VITE_API_URL          // explicit override (can be "" for relative)
+  : IS_LOCAL
+    ? "http://localhost:8000"              // local dev — use FastAPI
+    : "";                                  // production Vercel — use relative /api/run
 
 export async function validateCodeWithBackend(code) {
   const clientErr = clientSidePythonCheck(code);
@@ -190,7 +198,8 @@ export async function validateCodeWithBackend(code) {
   try {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${API_BASE}/api/run`, {
+    const endpoint = API_BASE ? `${API_BASE}/api/run` : "/api/run";
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, language: "python" }),

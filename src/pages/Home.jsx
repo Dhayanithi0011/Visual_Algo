@@ -472,6 +472,27 @@ export default function Home({ onNavigate }) {
         </div>
       </section>
 
+      {/* ══════════════════════════════════════════════════════
+          FOOTER
+         ══════════════════════════════════════════════════════ */}
+      <footer className="lp-footer">
+        <div className="lp-container">
+          <div className="lp-footer-inner">
+            <div className="lp-footer-brand">
+              <span className="brand-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--vsc-blue)", display: "inline-block", marginRight: 7 }} />
+              <span className="lp-footer-name">VisuAlgo</span>
+              <span className="brand-tag" style={{ fontSize: 9, fontFamily: "var(--font-mono)", background: "rgba(0,122,204,0.15)", color: "var(--vsc-blue)", border: "1px solid rgba(0,122,204,0.3)", borderRadius: 3, padding: "1px 5px", marginLeft: 2 }}>BETA</span>
+            </div>
+            <div className="lp-footer-copy">
+              &copy; {new Date().getFullYear()} <span className="lp-footer-team">SparkUp Team</span>. All rights reserved.
+            </div>
+            <div className="lp-footer-links">
+              <span className="lp-footer-link">Built for learners, by learners.</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

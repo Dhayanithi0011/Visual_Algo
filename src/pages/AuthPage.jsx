@@ -411,15 +411,23 @@ export default function AuthPage({ onSuccess, onBack }) {
       await signInWithGoogle();
       onSuccess();
     } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user" &&
-          err.code !== "auth/cancelled-popup-request") {
-        // If popup blocked by browser, show a clear message
-        if (err.code === "auth/popup-blocked") {
-          setGError("Popup was blocked. Please allow popups for this site and try again.");
-        } else {
-          setGError("Google sign-in failed. Please try again.");
-        }
+      console.error("Auth page Google error:", err.code, err.message);
+      // Silently ignore — user closed the popup themselves
+      if (err.code === "auth/popup-closed-by-user" ||
+          err.code === "auth/cancelled-popup-request") {
+        setGBusy(false);
+        return;
       }
+      // Show specific helpful messages based on error code
+      const msgs = {
+        "auth/popup-blocked":              "Popup was blocked. Allow popups for this site in your browser settings, then try again.",
+        "auth/unauthorized-domain":        "This domain is not authorized in Firebase. Add 'localhost' to Firebase Console → Authentication → Authorized Domains.",
+        "auth/operation-not-allowed":      "Google sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in methods.",
+        "auth/network-request-failed":     "Network error. Check your internet connection and try again.",
+        "auth/internal-error":             "Firebase internal error. Check browser console for details.",
+        "auth/invalid-api-key":            "Invalid Firebase API key. Check your .env configuration.",
+      };
+      setGError(msgs[err.code] || `Google sign-in failed (${err.code || "unknown"}). Check the browser console for details.`);
     }
     setGBusy(false);
   };
