@@ -81,7 +81,7 @@ const FEATURES = [
     glow: "rgba(78,201,176,0.15)",
     tag: "Quiz",
     title: "Quiz-Based Knowledge Gaps",
-    desc: "Answer algorithm quizzes per program. VisuAlgo maps exactly which concepts you've mastered and which need work — with a progress streak to keep you going.",
+    desc: "Answer algorithm quizzes per program. Algorithm Visualizer maps exactly which concepts you've mastered and which need work — with a progress streak to keep you going.",
     bullets: ["20 program quizzes", "Chapter progress tracking", "Daily streak system"],
   },
   {
@@ -152,14 +152,14 @@ export default function Home({ onNavigate }) {
               </div>
 
               <h1 className="lp-h1">
-                Learn DSA by<br />
+                Learn Algorithm by<br />
                 <span className="lp-h1-accent">
                   <TypeWriter words={["seeing it.", "doing it.", "quizzing it.", "mastering it."]} />
                 </span>
               </h1>
 
               <p className="lp-hero-desc">
-                VisuAlgo makes algorithms click. Step through live code execution,
+                Algorithm Visualizer makes algorithms click. Step through live code execution,
                 find your knowledge gaps with targeted quizzes, and track your
                 progress with a daily streak that keeps you coming back.
               </p>
@@ -455,8 +455,8 @@ export default function Home({ onNavigate }) {
               Stop guessing.<br />Start understanding.
             </h2>
             <p className="lp-cta-desc">
-              VisuAlgo is free. No credit card. No setup.
-              Just open it and start learning DSA the way it was meant to be taught.
+              Algorithm Visualizer is free. No credit card. No setup.
+              Just open it and start learning Algorithms the way it was meant to be taught.
             </p>
             <div className="lp-cta-btns">
               <button className="lp-btn-primary large" onClick={() => onNavigate("visualizer")}>
@@ -480,14 +480,14 @@ export default function Home({ onNavigate }) {
           <div className="lp-footer-inner">
             <div className="lp-footer-brand">
               <span className="brand-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--vsc-blue)", display: "inline-block", marginRight: 7 }} />
-              <span className="lp-footer-name">VisuAlgo</span>
+              <span className="lp-footer-name">Algorithm Visualizer</span>
               <span className="brand-tag" style={{ fontSize: 9, fontFamily: "var(--font-mono)", background: "rgba(0,122,204,0.15)", color: "var(--vsc-blue)", border: "1px solid rgba(0,122,204,0.3)", borderRadius: 3, padding: "1px 5px", marginLeft: 2 }}>BETA</span>
             </div>
             <div className="lp-footer-copy">
               &copy; {new Date().getFullYear()} <span className="lp-footer-team">SparkUp Team</span>. All rights reserved.
             </div>
-            <div className="lp-footer-links">
-              <span className="lp-footer-link">Built for learners, by learners.</span>
+            <div className="lp-footer-copy">
+              <span className="llp-footer-copy">Built for learners, by learners.</span>
             </div>
           </div>
         </div>

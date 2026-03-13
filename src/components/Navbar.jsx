@@ -116,7 +116,7 @@ export default function Navbar({ activePage, onNavigate, user, loading, onSignIn
           {/* Brand */}
           <div className="navbar-brand" onClick={() => handleNavigate("home")}>
             <span className="brand-dot" />
-            <span className="brand-name">VisuAlgo</span>
+            <span className="brand-name">Algorithm Visualizer</span>
             <span className="brand-tag">BETA</span>
           </div>
 
@@ -177,7 +177,7 @@ export default function Navbar({ activePage, onNavigate, user, loading, onSignIn
         <div className="drawer-header">
           <div className="drawer-brand">
             <span className="brand-dot" />
-            <span className="brand-name">VisuAlgo</span>
+            <span className="brand-name">Algorithm Visualizer</span>
             <span className="brand-tag">BETA</span>
           </div>
           <button className="drawer-close-btn" onClick={closeDrawer} aria-label="Close menu">
