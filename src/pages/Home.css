@@ -698,14 +698,24 @@
    ══════════════════════════════════════════════════════════════════ */
 .lp-how {
   position: relative;
-  padding: 96px 0;
-  overflow: hidden;
+  padding: 96px 0 96px;
+  overflow: visible;
 }
 .lp-how-bg {
   position: absolute;
   inset: 0;
   background: var(--bg-card);
-  clip-path: polygon(0 5%, 100% 0%, 100% 95%, 0% 100%);
+  /* Removed clip-path — it was cutting off the section heading at the top */
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Ensure heading content sits above the background div */
+.lp-how .lp-section-label,
+.lp-how .lp-h2,
+.lp-how .lp-steps-grid {
+  position: relative;
+  z-index: 1;
 }
 
 .lp-steps-grid {
