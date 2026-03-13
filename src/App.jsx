@@ -17,6 +17,8 @@ function getInitialPage() {
 
 export default function App() {
   const [activePage, setActivePage] = useState(getInitialPage);
+  // showAuth = true means the auth page is explicitly open
+  const [showAuth, setShowAuth] = useState(false);
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
 
   // ── All persistent progress lives here ────────────────────────────────────
@@ -32,6 +34,12 @@ export default function App() {
   } = useUserProgress(user);
 
   const navigate = (page) => {
+    if (page === "auth") {
+      // Any page that requires login should open auth overlay
+      setShowAuth(true);
+      return;
+    }
+    setShowAuth(false);
     setActivePage(page);
     try { sessionStorage.setItem("vz_page", page); } catch {}
   };
@@ -60,13 +68,38 @@ export default function App() {
     );
   }
 
-  // ── Not signed in → full-screen auth page ────────────────────────────────
-  if (!user) {
-    return <AuthPage onSuccess={() => navigate("home")} onBack={() => navigate("home")} />;
+  // ── Not signed in AND auth page explicitly shown ──────────────────────────
+  // OR: not signed in and trying to visit a protected page
+  const protectedPages = ["visualizer", "learning", "gap-detector", "dashboard"];
+  const needsAuth = !user && (showAuth || protectedPages.includes(activePage));
+
+  if (needsAuth) {
+    return (
+      <AuthPage
+        onSuccess={() => {
+          setShowAuth(false);
+          // After login, go to whichever page they wanted or home
+          const dest = protectedPages.includes(activePage) ? activePage : "home";
+          setActivePage(dest);
+          try { sessionStorage.setItem("vz_page", dest); } catch {}
+        }}
+        onBack={() => {
+          // Back just closes auth and shows home — no login required for home
+          setShowAuth(false);
+          setActivePage("home");
+          try { sessionStorage.setItem("vz_page", "home"); } catch {}
+        }}
+      />
+    );
   }
 
-  // ── Signed in → full app ──────────────────────────────────────────────────
+  // ── Page renderer (works for both signed-in and guest on home) ───────────
   const renderPage = () => {
+    // Guest trying to access protected page → redirect to home
+    if (!user && protectedPages.includes(activePage)) {
+      return <Home onNavigate={navigate} />;
+    }
+
     switch (activePage) {
       case "home":
         return <Home onNavigate={navigate} />;
@@ -119,7 +152,7 @@ export default function App() {
         onNavigate={navigate}
         user={user}
         loading={authLoading}
-        onSignIn={signInWithGoogle}
+        onSignIn={() => setShowAuth(true)}
         onSignOut={logout}
       />
       <main className="main-content">{renderPage()}</main>
